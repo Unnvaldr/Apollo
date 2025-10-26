@@ -910,7 +910,14 @@ namespace nvhttp {
     // Only include the MAC address for requests sent from paired clients over HTTPS.
     // For HTTP requests, use a placeholder MAC address that Moonlight knows to ignore.
     if constexpr (std::is_same_v<SunshineHTTPS, T>) {
-      tree.put("root.mac", platf::get_mac_address(net::addr_to_normalized_string(local_endpoint.address())));
+      auto determine_server_mac = [&local_endpoint] {
+        std::string host_mac;
+        if (!platf::get_host_mac_address(config::nvhttp.bind_address, host_mac)) {
+          host_mac = platf::get_mac_address(net::addr_to_normalized_string(local_endpoint.address()));
+        }
+        return host_mac;
+      };
+      tree.put("root.mac", determine_server_mac());
 
       auto named_cert_p = get_verified_cert(request);
       if (!!(named_cert_p->perm & PERM::server_cmd)) {
@@ -939,7 +946,7 @@ namespace nvhttp {
       }
     #endif
     } else {
-      tree.put("root.mac", "00:00:00:00:00:00");
+      tree.put("root.mac", platf::NULL_MAC_STRING);
       tree.put("root.Permission", "0");
     }
 
@@ -957,6 +964,8 @@ namespace nvhttp {
     } else {
       tree.put("root.LocalIP", net::addr_to_normalized_string(local_endpoint.address()));
     }
+
+    tree.put("root.ExternalIP", config::nvhttp.external_ip);
 
     uint32_t codec_mode_flags = SCM_H264;
     if (video::last_encoder_probe_supported_yuv444_for_codec[0]) {
