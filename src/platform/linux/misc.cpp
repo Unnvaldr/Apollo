@@ -235,7 +235,22 @@ namespace platf {
     }
 
     BOOST_LOG(warning) << "Unable to find MAC address for "sv << address;
-    return "00:00:00:00:00:00"s;
+    return NULL_MAC_STRING;
+  }
+
+  std::unordered_map<std::string, std::string> get_ethernet_adapters() {
+    std::unordered_map<std::string, std::string> adapters;
+    auto ifaddrs = get_ifaddrs();
+    for (auto pos = ifaddrs.get(); pos != nullptr; pos = pos->ifa_next) {
+      if (!pos->ifa_addr || from_sockaddr(pos->ifa_addr) == '\0') continue;
+      std::ifstream mac_file("/sys/class/net/"s + pos->ifa_name + "/address");
+      if (!mac_file.good()) continue;
+      adapters.emplace(
+        std::string {pos->ifa_name},
+        from_sockaddr(pos->ifa_addr)
+      );
+    }
+    return adapters;
   }
 
 std::string get_local_ip_for_gateway() {

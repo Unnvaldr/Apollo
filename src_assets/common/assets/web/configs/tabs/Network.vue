@@ -4,12 +4,14 @@ import Checkbox from "../../Checkbox.vue";
 
 const props = defineProps([
   'platform',
-  'config'
+  'config',
+  'availableAdapters'
 ])
 
 const defaultMoonlightPort = 47989
 
 const config = ref(props.config)
+const availableAdapters = ref(props.availableAdapters)
 const effectivePort = computed(() => +config.value?.port ?? defaultMoonlightPort)
 </script>
 
@@ -114,6 +116,16 @@ const effectivePort = computed(() => +config.value?.port ?? defaultMoonlightPort
         <option value="wan">{{ $t('config.origin_web_ui_allowed_wan') }}</option>
       </select>
       <div class="form-text">{{ $t('config.origin_web_ui_allowed_desc') }}</div>
+    </div>
+
+    <!-- Host interface -->
+    <div class="mb-3">
+      <label for="bind_address" class="form-label">{{ $t('config.bind_address') }}</label>
+      <select class="form-select" id="bind_address" v-model="config.bind_address">
+        <option value=""></option>
+        <option v-for="([k, v]) in Object.entries(availableAdapters)" :value="k">{{ v }}</option>
+      </select>
+      <div class="form-text">{{ $t('config.host_ip_desc') }}</div>
     </div>
 
     <!-- External IP -->

@@ -188,6 +188,8 @@ namespace config {
 
     std::string file_state;
 
+    std::string bind_address;
+
     std::string external_ip;
   };
 

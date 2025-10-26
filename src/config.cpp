@@ -546,6 +546,7 @@ namespace config {
 
     platf::get_host_name(),  // sunshine_name,
     "sunshine_state.json"s,  // file_state
+    {}, // bind_address
     {},  // external_ip
   };
 
@@ -1220,6 +1221,7 @@ namespace config {
     config::sunshine.credentials_file = config::nvhttp.file_state;
     path_f(vars, "credentials_file", config::sunshine.credentials_file);
 
+    string_f(vars, "bind_address", nvhttp.bind_address);
     string_f(vars, "external_ip", nvhttp.external_ip);
     list_prep_cmd_f(vars, "global_prep_cmd", config::sunshine.prep_cmds);
     list_prep_cmd_f(vars, "global_state_cmd", config::sunshine.state_cmds);

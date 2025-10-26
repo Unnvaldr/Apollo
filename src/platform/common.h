@@ -578,6 +578,20 @@ namespace platf {
 
   std::string get_mac_address(const std::string_view &address);
 
+  /**
+   * Lists all bindable network interfaces that have MAC address and determined IP address.
+   * @return Pairs of adapter name and IP address. IP address is always the first available one.
+   */
+  std::unordered_map<std::string, std::string> get_ethernet_adapters();
+
+  /**
+   * Receives host MAC address associated with provided network interface.
+   * @param adapter_name Adapter name in OS-dependent format.
+   * @param out_host_mac Host MAC address.
+   * @return Whether MAC address for that network interface was retrieved successfully.
+   */
+  bool get_host_mac_address(const std::string& adapter_name, std::string& out_host_mac);
+
   std::string get_local_ip_for_gateway();
 
   std::string from_sockaddr(const sockaddr *const);
@@ -849,6 +863,8 @@ namespace platf {
    * @return Vector of gamepad options and status.
    */
   std::vector<supported_gamepad_t> &supported_gamepads(input_t *input);
+
+  constexpr const char* NULL_MAC_STRING = "00:00:00:00:00:00";
 
   struct high_precision_timer: private boost::noncopyable {
     virtual ~high_precision_timer() = default;

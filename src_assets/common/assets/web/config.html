@@ -63,7 +63,8 @@
       <network
         v-if="currentTab === 'network'"
         :config="config"
-        :platform="platform">
+        :platform="platform"
+        :available-adapters="availableAdapters">
       </network>
 
       <!-- Files Tab -->
@@ -137,6 +138,7 @@
         config: null,
         currentTab: "general",
         vdisplayStatus: "1",
+        availableAdapters: null,
         global_prep_cmd: [],
         global_state_cmd: [],
         server_cmd: [],
@@ -223,6 +225,7 @@
               "address_family": "ipv4",
               "port": 47989,
               "origin_web_ui_allowed": "lan",
+              "bind_address": "",
               "external_ip": "",
               "lan_encryption_mode": 0,
               "wan_encryption_mode": 1,
@@ -360,6 +363,9 @@
 
           this.vdisplayStatus = this.config.vdisplayStatus;
           delete this.config.vdisplayStatus;
+
+          this.availableAdapters = this.config.availableAdapters;
+          delete this.config.availableAdapters;
 
           fallbackDisplayModeCache = this.config.fallback_mode || "";
 

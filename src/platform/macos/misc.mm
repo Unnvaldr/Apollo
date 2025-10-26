@@ -167,7 +167,7 @@ namespace platf {
     }
 
     BOOST_LOG(warning) << "Unable to find MAC address for "sv << address;
-    return "00:00:00:00:00:00"s;
+    return NULL_MAC_STRING;
   }
 
   // TODO: return actual IP

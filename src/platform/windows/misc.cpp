@@ -172,25 +172,131 @@ namespace platf {
     return info;
   }
 
+  std::string to_mac_address(const UINT& AddressLength, const BYTE Address[MAX_ADAPTER_ADDRESS_LENGTH]) {
+    std::stringstream mac_addr;
+    mac_addr << std::hex;
+    for (UINT i = 0; i < AddressLength; ++i) {
+      if (i > 0) {
+        mac_addr << ':';
+      }
+      mac_addr << std::setw(2) << std::setfill('0') << static_cast<int>(Address[i]);
+    }
+    return mac_addr.str();
+  }
+
   std::string get_mac_address(const std::string_view &address) {
     adapteraddrs_t info = get_adapteraddrs();
     for (auto adapter_pos = info.get(); adapter_pos != nullptr; adapter_pos = adapter_pos->Next) {
       for (auto addr_pos = adapter_pos->FirstUnicastAddress; addr_pos != nullptr; addr_pos = addr_pos->Next) {
         if (adapter_pos->PhysicalAddressLength != 0 && address == from_sockaddr(addr_pos->Address.lpSockaddr)) {
-          std::stringstream mac_addr;
-          mac_addr << std::hex;
-          for (int i = 0; i < adapter_pos->PhysicalAddressLength; i++) {
-            if (i > 0) {
-              mac_addr << ':';
-            }
-            mac_addr << std::setw(2) << std::setfill('0') << (int) adapter_pos->PhysicalAddress[i];
-          }
-          return mac_addr.str();
+          return to_mac_address(adapter_pos->PhysicalAddressLength, adapter_pos->PhysicalAddress);
         }
       }
     }
     BOOST_LOG(debug) << "Unable to find MAC address for "sv << address << ", is this a virtual network adapter?";
-    return "00:00:00:00:00:00"s;
+    return NULL_MAC_STRING;
+  }
+
+  std::unordered_map<std::string, std::string> get_ethernet_adapters() {
+    std::unordered_map<std::string, std::string> adapters;
+    PIP_ADAPTER_INFO pAdapterInfo;
+    PIP_ADAPTER_INFO pAdapter = nullptr;
+    DWORD dwRetVal = 0;
+    ULONG ulOutBufLen = sizeof(IP_ADAPTER_INFO);
+
+    pAdapterInfo = (IP_ADAPTER_INFO *)malloc(sizeof(IP_ADAPTER_INFO));
+    if (pAdapterInfo == nullptr) {
+      BOOST_LOG(warning) << "Error allocating memory needed to call GetAdaptersInfo";
+      return adapters;
+    }
+
+    // Make an initial call to GetAdaptersInfo to get the necessary size into the ulOutBufLen variable
+    if (GetAdaptersInfo(pAdapterInfo, &ulOutBufLen) == ERROR_BUFFER_OVERFLOW) {
+      free(pAdapterInfo);
+      pAdapterInfo = (IP_ADAPTER_INFO *)malloc(ulOutBufLen);
+      if (pAdapterInfo == nullptr) {
+        BOOST_LOG(warning) << "Error allocating memory needed to call GetAdaptersInfo";
+        return adapters;
+      }
+    }
+
+    if ((dwRetVal = GetAdaptersInfo(pAdapterInfo, &ulOutBufLen)) != NO_ERROR) {
+      if (pAdapterInfo) {
+        free(pAdapterInfo);
+      }
+      BOOST_LOG(warning) << "GetAdaptersInfo failed with error: " + std::to_string(dwRetVal);
+      return adapters;
+    }
+
+    pAdapter = pAdapterInfo;
+
+    // Iterate through the list of adapters
+    for (; pAdapter; pAdapter = pAdapter->Next) {
+      if (pAdapter->IpAddressList.IpAddress.String[0] == '\0') continue;
+      if (to_mac_address(pAdapter->AddressLength, pAdapter->Address) == NULL_MAC_STRING) continue;
+      adapters.emplace(
+        std::string {pAdapter->AdapterName},
+        std::string {pAdapter->IpAddressList.IpAddress.String}
+      );
+    }
+
+    if (pAdapterInfo) {
+      free(pAdapterInfo);
+    }
+
+    return adapters;
+  }
+
+  bool get_host_mac_address(const std::string& adapter_name, std::string& out_host_mac) {
+    out_host_mac = NULL_MAC_STRING;
+    if (adapter_name.size() <= 0) {
+      return false;
+    }
+    PIP_ADAPTER_INFO pAdapterInfo;
+    PIP_ADAPTER_INFO pAdapter = nullptr;
+    DWORD dwRetVal = 0;
+    ULONG ulOutBufLen = sizeof(IP_ADAPTER_INFO);
+
+    pAdapterInfo = (IP_ADAPTER_INFO *)malloc(sizeof(IP_ADAPTER_INFO));
+    if (pAdapterInfo == nullptr) {
+      BOOST_LOG(warning) << "Error allocating memory needed to call GetAdaptersInfo";
+      return false;
+    }
+
+    // Make an initial call to GetAdaptersInfo to get the necessary size into the ulOutBufLen variable
+    if (GetAdaptersInfo(pAdapterInfo, &ulOutBufLen) == ERROR_BUFFER_OVERFLOW) {
+      free(pAdapterInfo);
+      pAdapterInfo = (IP_ADAPTER_INFO *)malloc(ulOutBufLen);
+      if (pAdapterInfo == nullptr) {
+        BOOST_LOG(warning) << "Error allocating memory needed to call GetAdaptersInfo";
+        return false;
+      }
+    }
+
+    if ((dwRetVal = GetAdaptersInfo(pAdapterInfo, &ulOutBufLen)) != NO_ERROR) {
+      if (pAdapterInfo) {
+        free(pAdapterInfo);
+      }
+      BOOST_LOG(warning) << "GetAdaptersInfo failed with error: " + std::to_string(dwRetVal);
+      return false;
+    }
+
+    pAdapter = pAdapterInfo;
+
+    // Iterate through the list of adapters
+    for (; pAdapter; pAdapter = pAdapter->Next) {
+      if (pAdapter->AdapterName == adapter_name) continue;
+      std::string mac_address = to_mac_address(pAdapter->AddressLength, pAdapter->Address);
+      if (mac_address == NULL_MAC_STRING) continue;
+      out_host_mac = mac_address;
+      return true;
+    }
+
+    if (pAdapterInfo) {
+      free(pAdapterInfo);
+    }
+
+    return false;
   }
 
   std::string get_local_ip_for_gateway() {

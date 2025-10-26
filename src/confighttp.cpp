@@ -1008,6 +1008,11 @@ namespace confighttp {
 #ifdef _WIN32
     output_tree["vdisplayStatus"] = (int)proc::vDisplayDriverStatus;
 #endif
+    nlohmann::json adapter_tree;
+    for (const auto &[key, val] : platf::get_ethernet_adapters()) {
+      adapter_tree[key] = val;
+    }
+    output_tree["availableAdapters"] = adapter_tree;
     auto vars = config::parse_config(file_handler::read_file(config::sunshine.config_file.c_str()));
     for (auto &[name, value] : vars) {
       output_tree[name] = value;
